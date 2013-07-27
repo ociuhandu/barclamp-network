@@ -142,9 +142,9 @@ unless node[:platform] == "windows"
       if Nic.exists?(vlan) && Nic.vlan?(vlan)
         Chef::Log.info("Using vlan #{vlan} for network #{name}")
         our_iface = Nic.new vlan
+        have_vlan_iface = true
       else
-        Chef::Log.info("Creating vlan #{vlan} for network #{name}")
-        our_iface = Nic::Vlan.create(our_iface,network["vlan"])
+        have_vlan_iface = true
       end
       # Destroy any vlan interfaces for this vlan that might
       # already exist
@@ -152,7 +152,11 @@ unless node[:platform] == "windows"
         next unless n.kind_of?(Nic::Vlan)
         next if n == our_iface
         next unless n.vlan == network["vlan"].to_i
-        n.destroy
+        kill_nic(n.name)
+      end
+      unless have_vlan_iface
+        Chef::Log.info("Creating vlan #{vlan} for network #{name}")
+        our_iface = Nic::Vlan.create(our_iface,network["vlan"])
       end
       ifs[our_iface.name] ||= Hash.new
       ifs[our_iface.name]["addresses"] ||= Array.new
